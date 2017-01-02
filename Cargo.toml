@@ -18,7 +18,7 @@ repository = "https://github.com/pythoneer/tachyonic"
 
 # This is a small list of keywords used to categorize and search for this
 # package.
-keywords = ["software renderer", "renderer"]
+keywords = ["renderer", "3D"]
 
 # This is a string description of the license for this package. Currently
 # crates.io will validate the license provided against a whitelist of known
