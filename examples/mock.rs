@@ -1,3 +1,4 @@
+#![feature(step_by)]
 extern crate orbclient;
 extern crate tachyonic;
 extern crate nalgebra as na;
@@ -74,17 +75,25 @@ fn main() {
     let z_near = 0.1_f32;
     let z_far = 1000_f32;
 
-    //prepare data in object space
-    let mut cube = Mesh::new();
-    cube.vertices.push(Point4::new(-1_f32, 1_f32, 1_f32, 1_f32));
-    cube.vertices.push(Point4::new(1_f32, 1_f32, 1_f32, 1_f32));
-    cube.vertices.push(Point4::new(-1_f32, -1_f32, 1_f32, 1_f32));
-    cube.vertices.push(Point4::new(-1_f32, -1_f32, -1_f32, 1_f32));
-    cube.vertices.push(Point4::new(-1_f32, 1_f32, -1_f32, 1_f32));
-    cube.vertices.push(Point4::new(1_f32, 1_f32, -1_f32, 1_f32));
-    cube.vertices.push(Point4::new(1_f32, -1_f32, 1_f32, 1_f32));
-    cube.vertices.push(Point4::new(1_f32, -1_f32, -1_f32, 1_f32));
+    //prepare data in object space in homogeneous notation
+//    let mut cube = Mesh::new();
+//    cube.vertices.push(Point4::new(-1_f32, 1_f32, 1_f32, 1_f32));
+//    cube.vertices.push(Point4::new(1_f32, 1_f32, 1_f32, 1_f32));
+//    cube.vertices.push(Point4::new(-1_f32, -1_f32, 1_f32, 1_f32));
+//    cube.vertices.push(Point4::new(-1_f32, -1_f32, -1_f32, 1_f32));
+//    cube.vertices.push(Point4::new(-1_f32, 1_f32, -1_f32, 1_f32));
+//    cube.vertices.push(Point4::new(1_f32, 1_f32, -1_f32, 1_f32));
+//    cube.vertices.push(Point4::new(1_f32, -1_f32, 1_f32, 1_f32));
+//    cube.vertices.push(Point4::new(1_f32, -1_f32, -1_f32, 1_f32));
 
+    let mut triangle = Mesh::new();
+    triangle.vertices.push(Point4::new(0.5, 0.0, 1.0, 1.0)); // top
+    triangle.vertices.push(Point4::new(0.0, 1.0, 1.0, 1.0)); // left
+    triangle.vertices.push(Point4::new(1.0, 1.0, 1.0, 1.0)); // right
+
+    let mut meshes: Vec<Mesh> = Vec::new();
+//    meshes.push(cube);
+    meshes.push(triangle);
 
     let mut camera = Camera::new(Point3::new(0_f32, 0_f32, 5.0_f32), Point3::origin(), Vector3::y());
 
@@ -101,7 +110,9 @@ fn main() {
 
         //update
         {
-//            cube.rotation.y += 1_f32 as f32 / 1000_f32;
+
+//            meshes[0].rotation.z += 1_f32 as f32 / 1000_f32;
+//            triangle.rotation.y += 1_f32 as f32 / 1000_f32;
 //            cube.rotation.x += 1_f32 as f32 / 1000_f32;
 
 //            camera.target.x += 1_f32 as f32 / 1000_f32;
@@ -131,31 +142,40 @@ fn main() {
             let pm = PerspectiveMatrix3::new(aspr, fov.to_radians(), z_near, z_far);
             let projection_matrix = pm.as_matrix().clone();
 
-            //make this a function of the mesh/object
-            //project the object from object space into world space
-            let world_matrix = Isometry3::new(cube.position.to_vector(), cube.rotation).to_homogeneous();
+//            //draw every mesh
+            for mesh in &meshes {
 
-            //combine all three in the correct(opposite) order and project from
-            //object_space -> world_space -> camera_space -> screen_space
-            let transformation_matrix = projection_matrix * view_matrix * world_matrix;
+                //make this a function of the mesh/object
+                //project the object from object space into world space
+                let world_matrix = Isometry3::new((*mesh).position.to_vector(), (*mesh).rotation).to_homogeneous();
 
-            //draw the vertices of the cube
-            for vertex in &cube.vertices
-            {
-                //apply transform to the vertex and and map to raster space
-                let pixel_pos = project((*vertex), transformation_matrix, ww, wh);
+                //combine all three in the correct(opposite) order and project from
+                //object_space -> world_space -> camera_space -> screen_space
+                let transformation_matrix = projection_matrix * view_matrix * world_matrix;
 
-                if !(pixel_pos.x > 0_f32 && pixel_pos.x < ww as f32 && pixel_pos.y > 0_f32 && pixel_pos.y < wh as f32) {
-                    continue;
+                //draw the vertices/faces/triangles of the mesh
+//                for vertex in &(*mesh).vertices {
+                for idx in (0..mesh.vertices.len()).step_by(3) {
+
+                    //apply transform to the vertex and and map to raster space
+                    let vert1 = project(mesh.vertices[idx as usize], transformation_matrix, ww, wh);
+                    let vert2 = project(mesh.vertices[(idx + 1) as usize], transformation_matrix, ww, wh);
+                    let vert3 = project(mesh.vertices[(idx + 2) as usize], transformation_matrix, ww, wh);
+
+                    //TODO(dustin) correct the bounds
+//                    if !(pixel_pos.x > 0_f32 && pixel_pos.x < ww as f32 && pixel_pos.y > 0_f32 && pixel_pos.y < wh as f32) {
+//                        continue;
+//                    }
+
+                    render_context.draw_triangle1(vert1, vert2, vert3); //top left right
+
+//                    let data = render_context.get_raw();
+//
+//                    let color = Color::rgba(200, 200, 200, 255);
+//                    let new = color.data;
+//                    let old = &mut data[pixel_pos.y as usize * ww as usize + pixel_pos.x as usize].data;
+//                    *old = new;
                 }
-
-                let data = render_context.get_raw();
-
-                let color = Color::rgba(200, 200, 200, 255);
-                let new = color.data;
-                let old = &mut data[pixel_pos.y as usize * ww as usize + pixel_pos.x as usize].data;
-                *old = new;
-
             }
         }
 

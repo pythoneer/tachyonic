@@ -1,12 +1,12 @@
 [package]
 name = "tachyonic"
-version = "0.1.0"
+version = "0.0.1"
 authors = ["Dustin Bensing <dustin.bensing@googlemail.com>"]
 
 [dependencies]
-orbclient = "*"
-orbimage = { git = "https://github.com/redox-os/orbimage.git" }
+orbclient = "0.2.11"
+orbimage = "0.1.11"
 nalgebra = "0.10.*"
 
-[profile.release]
-debug = true
+#[profile.release]
+#debug = true
