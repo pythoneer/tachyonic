@@ -4,7 +4,7 @@ extern crate tachyonic;
 extern crate nalgebra as na;
 
 use orbclient::Color;
-use tachyonic::{ RenderContext };
+use tachyonic::{ RenderContext, Mesh, Texture, Vertex };
 use na::{ Vector3, Point3, Point4, Point2, Matrix4, Perspective3, PerspectiveMatrix3, Inverse, Eye, Isometry3, Rotation3, Origin, ToHomogeneous };
 use std::time::Instant;
 
@@ -29,21 +29,56 @@ impl Camera {
     }
 }
 
-pub struct Mesh {
-    pub vertices: Vec<Point4<f32>>,
-    pub position: Point3<f32>,
-    pub rotation: Vector3<f32>,
-}
-
-impl Mesh {
-    pub fn new() -> Self {
-        Mesh {
-            vertices: Vec::new(),
-            position: Point3::new(0_f32, 0_f32, 0_f32),
-            rotation: Vector3::new(0_f32, 0_f32, 0_f32),
-        }
-    }
-}
+////AOS <-> SOA ?
+//pub struct Vertex {
+//    pub position: Point4<f32>,
+//    pub texture_coordinate: Point2<f32>,
+//}
+//
+//impl Vertex {
+//    pub fn new(position: Point4<f32>, texture_coordinate: Point2<f32>, color: Color) -> Self {
+//        Vertex {
+//            position: position,
+//            texture_coordinate: texture_coordinate,
+//        }
+//    }
+//}
+//
+//pub struct Mesh {
+//    pub vertices: Vec<Point4<f32>>,
+//    pub tvertices: Vec<Vertex>,
+//    pub position: Point3<f32>,
+//    pub rotation: Vector3<f32>,
+//}
+//
+//impl Mesh {
+//    pub fn new() -> Self {
+//        Mesh {
+//            vertices: Vec::new(),
+//            tvertices: Vec::new(),
+//            position: Point3::new(0_f32, 0_f32, 0_f32),
+//            rotation: Vector3::new(0_f32, 0_f32, 0_f32),
+//        }
+//    }
+//}
+//
+//pub struct Texture {
+//
+//}
+//
+//impl Texture {
+//    pub fn get(&self, u: f32, v: f32) -> Color {
+//
+//        if(u == 0.5 && v == 0.0) {
+//            Color::rgba(255, 0, 0, 255)
+//        } else if (u == 0.0 && v == 1.0) {
+//            Color::rgba(0, 255, 0, 255)
+//        } else {
+//            Color::rgba(0, 0, 255, 255)
+//        }
+//
+//    }
+//}
 
 fn project(point: Point4<f32>, mat: Matrix4<f32>, ww: u32, wh: u32) -> Point2<f32> {
 
@@ -87,15 +122,21 @@ fn main() {
 //    cube.vertices.push(Point4::new(1_f32, -1_f32, -1_f32, 1_f32));
 
     let mut triangle = Mesh::new();
-    triangle.vertices.push(Point4::new(0.5, 0.0, 1.0, 1.0)); // top
-    triangle.vertices.push(Point4::new(0.0, 1.0, 1.0, 1.0)); // left
-    triangle.vertices.push(Point4::new(1.0, 1.0, 1.0, 1.0)); // right
+    triangle.vertices.push(Point4::new(0.0, -0.5, 0.0, 1.0)); // top
+    triangle.vertices.push(Point4::new(-0.5, 0.5, 0.0, 1.0)); // left
+    triangle.vertices.push(Point4::new(0.5, 0.5, 0.0, 1.0)); // right
+
+    triangle.tvertices.push(Vertex::new(Point4::new(0.0, -0.5, 0.0, 1.0), Point2::new(0.5, 0.0), Color::rgba(255, 0, 0, 255))); // top
+    triangle.tvertices.push(Vertex::new(Point4::new(-0.5, 0.5, 0.0, 1.0), Point2::new(0.0, 1.0), Color::rgba(0, 255, 0, 255))); // left
+    triangle.tvertices.push(Vertex::new(Point4::new(0.5, 0.5, 0.0, 1.0), Point2::new(1.0, 1.0), Color::rgba(0, 0, 255, 255))); // right
+
+    let tex = Texture::new();
 
     let mut meshes: Vec<Mesh> = Vec::new();
 //    meshes.push(cube);
     meshes.push(triangle);
 
-    let mut camera = Camera::new(Point3::new(0_f32, 0_f32, 5.0_f32), Point3::origin(), Vector3::y());
+    let mut camera = Camera::new(Point3::new(0.0, 0.0, 1.0), Point3::origin(), Vector3::y());
 
     let mut frame_cnt = 0_f32;
     let mut counter_duration = 0_f32;
@@ -111,12 +152,12 @@ fn main() {
         //update
         {
 
-//            meshes[0].rotation.z += 1_f32 as f32 / 1000_f32;
+            meshes[0].rotation.y += 1_f32 as f32 / 1000_f32;
 //            triangle.rotation.y += 1_f32 as f32 / 1000_f32;
 //            cube.rotation.x += 1_f32 as f32 / 1000_f32;
 
 //            camera.target.x += 1_f32 as f32 / 1000_f32;
-//            camera.position.z -= 1_f32 as f32 / 1000_f32;
+//            camera.position.y -= 1_f32 as f32 / 1000_f32;
 
 //            fov += 1_f32 / 100_f32;
 
@@ -162,19 +203,40 @@ fn main() {
                     let vert2 = project(mesh.vertices[(idx + 1) as usize], transformation_matrix, ww, wh);
                     let vert3 = project(mesh.vertices[(idx + 2) as usize], transformation_matrix, ww, wh);
 
+                    let vert_t_1 = &mesh.tvertices[idx as usize];
+                    let vert_t_2 = &mesh.tvertices[(idx + 1) as usize];
+                    let vert_t_3 = &mesh.tvertices[(idx + 2) as usize];
+
                     //TODO(dustin) correct the bounds
 //                    if !(pixel_pos.x > 0_f32 && pixel_pos.x < ww as f32 && pixel_pos.y > 0_f32 && pixel_pos.y < wh as f32) {
 //                        continue;
 //                    }
+                    render_context.draw_triangle_v(vert_t_1, vert_t_2, vert_t_3, &tex, &transformation_matrix);
+//                    render_context.draw_triangle1(vert1, vert2, vert3, &tex); //top left right
 
-                    render_context.draw_triangle1(vert1, vert2, vert3); //top left right
+                    let data = render_context.get_raw();
 
-//                    let data = render_context.get_raw();
-//
-//                    let color = Color::rgba(200, 200, 200, 255);
-//                    let new = color.data;
-//                    let old = &mut data[pixel_pos.y as usize * ww as usize + pixel_pos.x as usize].data;
-//                    *old = new;
+                    {
+                        let color = Color::rgba(200, 0, 0, 255);
+                        let new = color.data;
+                        let old = &mut data[vert1.y as usize * ww as usize + vert1.x as usize].data;
+                        *old = new;
+                    }
+
+
+                    {
+                        let color = Color::rgba(0, 200, 0, 255);
+                        let new = color.data;
+                        let old = &mut data[vert2.y as usize * ww as usize + vert2.x as usize].data;
+                        *old = new;
+                    }
+
+                    {
+                        let color = Color::rgba(0, 0, 200, 255);
+                        let new = color.data;
+                        let old = &mut data[vert3.y as usize * ww as usize + vert3.x as usize].data;
+                        *old = new;
+                    }
                 }
             }
         }
